@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flappy Love</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="game-wrapper">
+
+    <h1 class="title">Flappy Love</h1>
+    <p class="subtitle">A tiny game for two hearts</p>
+
+    <div class="info-bar">
+      <span id="currentPlayerLabel">Player: —</span>
+      <span id="currentScoreLabel">Score: 0</span>
+    </div>
+
+    <span id="topPlayerLabel" class="top-player">Loading scores…</span>
+
+    <canvas id="gameCanvas" width="360" height="640"></canvas>
+  </div>
+
+  <!-- PLAYER SELECTION OVERLAY -->
+  <div id="playerOverlay" class="overlay">
+    <div class="overlay-card">
+      <h2>Who’s playing?</h2>
+      <p>Select your player to begin.</p>
+
+      <div class="button-row">
+        <button id="allisterBtn" class="btn primary">Allister</button>
+        <button id="lucaBtn" class="btn secondary">Luca</button>
+      </div>
+
+      <p class="tiny-note bottom-note">Your scores sync online</p>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+
+  <script>
+    // Hook buttons to selectPlayer()
+    document.getElementById("allisterBtn").onclick = () => {
+      selectPlayer("Allister");
+    };
+
+    document.getElementById("lucaBtn").onclick = () => {
+      selectPlayer("Luca");
+    };
+  </script>
+
+</body>
+</html>
