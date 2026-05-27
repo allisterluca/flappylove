@@ -6,19 +6,11 @@ const PIPE_SPEED = 2;
 const PIPE_INTERVAL = 120;
 const HEART_LIFETIME = 60;
 
-// ====== JSONBIN CONFIG ======
-const BIN_ID = "6a16e56e8ef04f4538211ed5";
-const MASTER_KEY = "$2a$10$msxHGavinuXEQqYiQHKCte2VN75FAT4TUMqtBY6MxCTcDLc.yYyi2";
-
-const JSONBIN_BASE = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
-const JSONBIN_GET = `${JSONBIN_BASE}/latest`;
-
-// ====== PROXY FALLBACK CHAIN ======
-const PROXIES = [
-  url => `https://corsproxy.io/?${url}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}`,
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-];
+// ====== GITHUB CONFIG ======
+const GITHUB_TOKEN = "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";
+const GITHUB_OWNER = "allisterluca";
+const GITHUB_REPO = "flappylove";
+const SCORES_FILE = "scores.json";
 
 // ====== CANVAS ======
 const canvas = document.getElementById("gameCanvas");
@@ -39,41 +31,57 @@ let currentPlayer = null;
 let currentMessage = "";
 let messageTimer = 0;
 
-// ====== PROXY FETCH WRAPPER ======
-async function proxyFetch(url, options = {}) {
-  for (const wrap of PROXIES) {
-    const proxied = wrap(url);
-    try {
-      const res = await fetch(proxied, options);
-      if (res.ok) return res;
-    } catch (e) {}
-  }
-  throw new Error("All proxies failed");
-}
-
-// ====== LOAD SCORES ======
+// ====== LOAD SCORES FROM GITHUB ======
 async function loadScores() {
   try {
-    const res = await proxyFetch(JSONBIN_GET);
-    const data = await res.json();
-    if (data && data.record) scores = data.record;
+    const url = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${SCORES_FILE}?t=${Date.now()}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      scores = await res.json();
+    }
   } catch (e) {
-    console.log("Failed to load scores:", e);
+    console.log("Failed to load scores from GitHub:", e);
     scores = { Allister: 0, Luca: 0 };
   }
 }
 
-// ====== SAVE SCORES ======
+// ====== SAVE SCORES TO GITHUB ======
 async function saveScores() {
   try {
-    await proxyFetch(JSONBIN_BASE, {
+    const fileUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${SCORES_FILE}`;
+    
+    // Get current file SHA (needed for update)
+    const getRes = await fetch(fileUrl, {
+      headers: {
+        "Authorization": `token ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github.v3+json"
+      }
+    });
+    
+    let sha = "";
+    if (getRes.ok) {
+      const fileData = await getRes.json();
+      sha = fileData.sha;
+    }
+
+    // Update the file
+    const putRes = await fetch(fileUrl, {
       method: "PUT",
       headers: {
-        "Content-Type": "application/json",
-        "X-Master-Key": MASTER_KEY
+        "Authorization": `token ${GITHUB_TOKEN}`,
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(scores)
+      body: JSON.stringify({
+        message: `Update scores: ${currentPlayer} scored ${score}`,
+        content: btoa(JSON.stringify(scores, null, 2)),
+        sha: sha
+      })
     });
+
+    if (!putRes.ok) {
+      console.log("Failed to save scores to GitHub");
+    }
   } catch (e) {
     console.log("Failed to save scores:", e);
   }
@@ -102,8 +110,8 @@ const birdFlag = {
 // ====== WHISPERS ======
 const messages = [
   "Szeretlek", "Hiányzol", "Fontos vagy", "Kedvellek", "Veled jó",
-  "You matter", "You’re lovely", "You’re warm", "You’re special",
-  "You make me smile", "You feel like home", "You’re my light"
+  "You matter", "You're lovely", "You're warm", "You're special",
+  "You make me smile", "You feel like home", "You're my light"
 ];
 
 // ====== PLAYER SELECTION ======
@@ -371,12 +379,25 @@ function drawGameOver() {
   ctx.fillStyle = "rgba(0,0,0,0.35)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Get top player info
+  const topPlayer = scores.Allister > scores.Luca ? "Allister" : "Luca";
+  const topScore = Math.max(scores.Allister, scores.Luca);
+
   ctx.fillStyle = "#ffffff";
   ctx.font = "24px sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 20);
+  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 40);
+  
   ctx.font = "16px sans-serif";
-  ctx.fillText("Tap to flap again soon", canvas.width / 2, canvas.height / 2 + 10);
+  ctx.fillText(`Your Score: ${score}`, canvas.width / 2, canvas.height / 2 - 5);
+  
+  ctx.font = "14px sans-serif";
+  ctx.fillStyle = "#ffb6d9";
+  ctx.fillText(`${topPlayer} is leading (${topScore})`, canvas.width / 2, canvas.height / 2 + 20);
+  
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "12px sans-serif";
+  ctx.fillText("Tap to play again", canvas.width / 2, canvas.height / 2 + 50);
 }
 
 // ====== LOOP ======
