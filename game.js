@@ -37,12 +37,20 @@ async function loadScores() {
     const url = `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/${SCORES_FILE}?t=${Date.now()}`;
     const res = await fetch(url);
     if (res.ok) {
-      scores = await res.json();
+      const data = await res.json();
+      if (data && typeof data === 'object') {
+        scores = data;
+      }
+    } else {
+      scores = { Allister: 0, Luca: 0 };
     }
   } catch (e) {
     console.log("Failed to load scores from GitHub:", e);
     scores = { Allister: 0, Luca: 0 };
   }
+  
+  updateTopPlayerLabel();
+  updateLeaderboardDisplay();
 }
 
 // ====== SAVE SCORES TO GITHUB ======
@@ -50,7 +58,6 @@ async function saveScores() {
   try {
     const fileUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${SCORES_FILE}`;
     
-    // Get current file SHA (needed for update)
     const getRes = await fetch(fileUrl, {
       headers: {
         "Authorization": `token ${GITHUB_TOKEN}`,
@@ -64,7 +71,6 @@ async function saveScores() {
       sha = fileData.sha;
     }
 
-    // Update the file
     const putRes = await fetch(fileUrl, {
       method: "PUT",
       headers: {
@@ -79,12 +85,20 @@ async function saveScores() {
       })
     });
 
-    if (!putRes.ok) {
-      console.log("Failed to save scores to GitHub");
+    if (putRes.ok) {
+      updateLeaderboardDisplay();
     }
   } catch (e) {
     console.log("Failed to save scores:", e);
   }
+}
+
+// ====== UPDATE LEADERBOARD DISPLAY ======
+function updateLeaderboardDisplay() {
+  const allisterScore = scores.Allister || 0;
+  const lucaScore = scores.Luca || 0;
+  document.getElementById("allisterScore").textContent = allisterScore;
+  document.getElementById("lucaScore").textContent = lucaScore;
 }
 
 // ====== BIRD COLORS ======
@@ -111,7 +125,8 @@ const birdFlag = {
 const messages = [
   "Szeretlek", "Hiányzol", "Fontos vagy", "Kedvellek", "Veled jó",
   "You matter", "You're lovely", "You're warm", "You're special",
-  "You make me smile", "You feel like home", "You're my light"
+  "You make me smile", "You feel like home", "You're my light", "I adore you",
+  "You're perfect", "Always you", "Forever us"
 ];
 
 // ====== PLAYER SELECTION ======
@@ -125,10 +140,12 @@ function selectPlayer(name) {
 
 // ====== UI LABELS ======
 function updateTopPlayerLabel() {
-  const top = scores.Allister > scores.Luca ? "Allister" : "Luca";
-  const topScore = Math.max(scores.Allister, scores.Luca);
+  const allisterScore = scores.Allister || 0;
+  const lucaScore = scores.Luca || 0;
+  const top = allisterScore > lucaScore ? "Allister" : (lucaScore > allisterScore ? "Luca" : "Tied");
+  const topScore = Math.max(allisterScore, lucaScore);
   document.getElementById("topPlayerLabel").textContent =
-    `Top: ${top} (${topScore})`;
+    `✨ ${top} is leading with ${topScore} points ✨`;
 }
 
 function updateScoreLabel() {
@@ -167,26 +184,27 @@ function spawnPipe() {
 
 // ====== HEARTS ======
 function spawnHeart(x, y, big = false) {
-  const count = big ? 25 : 6;
-  const size = big ? 10 : 6;
+  const count = big ? 30 : 8;
+  const size = big ? 12 : 7;
 
   for (let i = 0; i < count; i++) {
     hearts.push({
       x,
       y,
       size,
-      vx: (Math.random() - 0.5) * (big ? 4 : 2),
-      vy: (Math.random() - 0.5) * (big ? 4 : 2),
-      life: HEART_LIFETIME * (big ? 2 : 1)
+      vx: (Math.random() - 0.5) * (big ? 5 : 3),
+      vy: (Math.random() - 0.5) * (big ? 5 : 2.5) - (big ? 2 : 0.5),
+      life: HEART_LIFETIME * (big ? 2.5 : 1),
+      rotation: Math.random() * Math.PI * 2
     });
   }
 }
 
 // ====== MESSAGES ======
 function triggerMessage() {
-  if (Math.random() < 0.35) {
+  if (Math.random() < 0.4) {
     currentMessage = messages[Math.floor(Math.random() * messages.length)];
-    messageTimer = 120;
+    messageTimer = 140;
   }
 }
 
@@ -220,7 +238,7 @@ function endGame() {
     document.getElementById("playerOverlay").classList.remove("hidden");
     currentPlayer = null;
     document.getElementById("currentPlayerLabel").textContent = "Player: —";
-  }, 1200);
+  }, 1500);
 }
 
 function resetGame() {
@@ -262,6 +280,8 @@ function update() {
     const h = hearts[i];
     h.x += h.vx;
     h.y += h.vy;
+    h.vy += 0.15;
+    h.rotation += 0.1;
     h.life--;
     if (h.life <= 0) hearts.splice(i, 1);
   }
@@ -287,20 +307,37 @@ function update() {
 function drawBackground() {
   const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
   grad.addColorStop(0, "#ffd6e8");
-  grad.addColorStop(0.5, "#e8e0ff");
-  grad.addColorStop(1, "#d6f3ff");
+  grad.addColorStop(0.4, "#ffe8f0");
+  grad.addColorStop(0.6, "#f0e6ff");
+  grad.addColorStop(1, "#e8f4ff");
 
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Subtle decorative stars
+  ctx.fillStyle = "rgba(255, 182, 193, 0.3)";
+  for (let i = 0; i < 5; i++) {
+    const x = 50 + i * 60;
+    const y = 20 + (Math.sin(frame * 0.01 + i) * 5);
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawPipes() {
-  ctx.fillStyle = "#ffb6d9";
+  ctx.fillStyle = "rgba(255, 182, 211, 0.9)";
+  ctx.shadowColor = "rgba(255, 111, 168, 0.3)";
+  ctx.shadowBlur = 15;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 4;
 
   for (const p of pipes) {
     drawRoundedRect(p.x, 0, 70, p.top, 20);
     drawRoundedRect(p.x, p.bottom, 70, canvas.height - p.bottom, 20);
   }
+  
+  ctx.shadowColor = "transparent";
 }
 
 function drawRoundedRect(x, y, w, h, r) {
@@ -325,6 +362,11 @@ function drawBird() {
   ctx.save();
   ctx.translate(bird.x, bird.y);
 
+  ctx.shadowColor = "rgba(255, 111, 168, 0.4)";
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
   ctx.beginPath();
   ctx.fillStyle = f.top;
   ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
@@ -345,6 +387,7 @@ function drawBird() {
   ctx.arc(5, -3, 2.5, 0, Math.PI * 2);
   ctx.fill();
 
+  ctx.shadowColor = "transparent";
   ctx.restore();
 }
 
@@ -352,13 +395,18 @@ function drawHearts() {
   for (const h of hearts) {
     ctx.save();
     ctx.globalAlpha = h.life / HEART_LIFETIME;
+    ctx.translate(h.x, h.y);
+    ctx.rotate(h.rotation);
+
     ctx.fillStyle = "#ff6fa8";
+    ctx.shadowColor = "rgba(255, 111, 168, 0.6)";
+    ctx.shadowBlur = 8;
 
     ctx.beginPath();
     const s = h.size;
-    ctx.moveTo(h.x, h.y);
-    ctx.bezierCurveTo(h.x - s, h.y - s, h.x - s * 1.5, h.y + s / 2, h.x, h.y + s);
-    ctx.bezierCurveTo(h.x + s * 1.5, h.y + s / 2, h.x + s, h.y - s, h.x, h.y);
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(-s, -s, -s * 1.5, s / 2, 0, s);
+    ctx.bezierCurveTo(s * 1.5, s / 2, s, -s, 0, 0);
 
     ctx.fill();
     ctx.restore();
@@ -367,37 +415,66 @@ function drawHearts() {
 
 function drawMessage() {
   if (messageTimer <= 0) return;
-  ctx.fillStyle = "#4e342e";
-  ctx.font = "16px sans-serif";
+  
+  const alpha = messageTimer > 100 ? 1 : (messageTimer / 100);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  
+  ctx.fillStyle = "rgba(255, 111, 168, 0.9)";
+  ctx.font = "italic 18px Georgia, serif";
   ctx.textAlign = "center";
+  ctx.shadowColor = "rgba(255, 182, 193, 0.5)";
+  ctx.shadowBlur = 8;
   ctx.fillText(currentMessage, canvas.width / 2, 70);
+  
+  ctx.restore();
 }
 
 function drawGameOver() {
   if (!gameOver) return;
 
-  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Get top player info
-  const topPlayer = scores.Allister > scores.Luca ? "Allister" : "Luca";
-  const topScore = Math.max(scores.Allister, scores.Luca);
+  const allisterScore = scores.Allister || 0;
+  const lucaScore = scores.Luca || 0;
+  const topPlayer = allisterScore > lucaScore ? "Allister" : "Luca";
+  const topScore = Math.max(allisterScore, lucaScore);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "24px sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 40);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 8;
   
-  ctx.font = "16px sans-serif";
-  ctx.fillText(`Your Score: ${score}`, canvas.width / 2, canvas.height / 2 - 5);
+  const cardX = canvas.width / 2 - 120;
+  const cardY = canvas.height / 2 - 90;
+  const cardW = 240;
+  const cardH = 180;
+  
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 20);
+  ctx.fill();
+
+  ctx.shadowColor = "transparent";
+
+  ctx.fillStyle = "#ff6fa8";
+  ctx.font = "bold 26px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Game Over", canvas.width / 2, cardY + 50);
+  
+  ctx.fillStyle = "#4e342e";
+  ctx.font = "18px sans-serif";
+  ctx.fillText(`Your Score: ${score}`, canvas.width / 2, cardY + 80);
   
   ctx.font = "14px sans-serif";
-  ctx.fillStyle = "#ffb6d9";
-  ctx.fillText(`${topPlayer} is leading (${topScore})`, canvas.width / 2, canvas.height / 2 + 20);
+  ctx.fillStyle = "#ff6fa8";
+  ctx.fillText(`${topPlayer} is leading`, canvas.width / 2, cardY + 110);
+  ctx.fillStyle = "#a06fb8";
+  ctx.fillText(`${topScore} points`, canvas.width / 2, cardY + 130);
   
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "12px sans-serif";
-  ctx.fillText("Tap to play again", canvas.width / 2, canvas.height / 2 + 50);
+  ctx.fillStyle = "#9a88b3";
+  ctx.font = "11px sans-serif";
+  ctx.fillText("Tap to play again", canvas.width / 2, cardY + 155);
 }
 
 // ====== LOOP ======
