@@ -1,8 +1,8 @@
 // ====== CONFIG ======
-const GRAVITY = 0.3;
-const FLAP_STRENGTH = -8;
+const GRAVITY = 0.4;
+const FLAP_STRENGTH = -7;
 const GAP_HEIGHT = 160;
-const PIPE_SPEED = 1.6;
+const PIPE_SPEED = 2;
 const PIPE_INTERVAL = 120;
 const HEART_LIFETIME = 60;
 
