@@ -1,9 +1,9 @@
 // ====== CONFIG ======
-const GRAVITY = 0.35;
+const GRAVITY = 0.33;
 const FLAP_STRENGTH = -7.5;
-const GAP_HEIGHT = 168;
-const PIPE_SPEED = 2.8;
-const PIPE_INTERVAL = 160;
+const GAP_HEIGHT = 165;
+const PIPE_SPEED = 3.0;
+const PIPE_INTERVAL = 170;
 const HEART_LIFETIME = 60;
 
 // ====== FIREBASE CONFIG ======
