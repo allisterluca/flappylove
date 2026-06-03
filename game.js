@@ -2,7 +2,7 @@
 const GRAVITY = 0.3;
 const FLAP_STRENGTH = -8;
 const GAP_HEIGHT = 160;
-const PIPE_SPEED = 0.8;
+const PIPE_SPEED = 1.6;
 const PIPE_INTERVAL = 120;
 const HEART_LIFETIME = 60;
 
